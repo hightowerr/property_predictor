@@ -21,6 +21,9 @@ def get_county() -> Optional[List[str]]:
 def get_xgb_imp() -> Optional[object]:
     return __xgb_imp
 
+def get_model() -> Optional[object]:
+    return __model
+
 def load_saved_artifacts() -> bool:
     """Load saved artifacts from the artifacts directory."""
     global __property_type, __district, __county, __model, __xgb_imp
@@ -57,3 +60,17 @@ def load_saved_artifacts() -> bool:
         print(f"Warning: Error loading XGBoost importance: {e}")
 
     return True
+
+if __name__ == "__main__":
+    print("Loading saved artifacts...")
+    success = load_saved_artifacts()
+    
+    if success:
+        print("\nLoaded Artifacts:")
+        print("Property Types:", get_property_type())
+        print("Number of Districts:", len(get_district()) if get_district() else "None")
+        print("Number of Counties:", len(get_county()) if get_county() else "None")
+        print("Model loaded:", get_model() is not None)
+        print("XGBoost Importance loaded:", get_xgb_imp() is not None)
+    else:
+        print("Failed to load artifacts.")
