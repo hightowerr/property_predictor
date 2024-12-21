@@ -38,19 +38,14 @@ def load_saved_artifacts() -> bool:
         print(f"Error loading columns: {e}")
         return False
 
-    model_files = ["home_prices_model.pkl", "home_prices_model.pickle"]
-    for model_file in model_files:
-        try:
-            with (artifacts_path / model_file).open("rb") as f:
-                __model = pickle.load(f)
-                break
-        except FileNotFoundError:
-            continue
-        except Exception as e:
-            print(f"Error loading model: {e}")
-            return False
-    else:
-        print("Error: Could not find model file")
+    try:
+        with (artifacts_path / "home_prices_model.pkl").open("rb") as f:
+            __model = pickle.load(f)
+    except FileNotFoundError:
+        print("Error: Could not find home_prices_model.pkl")
+        return False
+    except Exception as e:
+        print(f"Error loading model: {e}")
         return False
 
     try:
