@@ -1,134 +1,182 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { 
-  TextField, 
-  Select, 
-  MenuItem, 
-  Button, 
-  Grid, 
-  Typography, 
-  FormControl, 
+import {
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Grid,
+  FormControl,
   InputLabel,
-  Paper
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 
 interface FormData {
-  Year: number;
+  Year: string;
   District: string;
   property_type: string;
   County: string;
 }
 
+interface PredictionResponse {
+  estimated_price: number;
+  error?: string;
+}
+
 const PricePredictionForm: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
-    Year: new Date().getFullYear(),
+    Year: new Date().getFullYear().toString(),
     District: '',
     property_type: '',
     County: ''
   });
-  
+
   const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);
   const [counties, setCounties] = useState<string[]>([]);
-  const [predictedPrice, setPredictedPrice] = useState<number | null>(null);
+  const [prediction, setPrediction] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchData = async () => {
       try {
-        const [propertyTypesRes, districtsRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/property-types'),
-          axios.get('http://localhost:5000/api/districts')
+        const [propertyTypesRes, districtsRes, countiesRes] = await Promise.all([
+          fetch('http://localhost:5000/api/property-types'),
+          fetch('http://localhost:5000/api/districts'),
+          fetch('http://localhost:5000/api/counties')
         ]);
 
-        setPropertyTypes(
-          propertyTypesRes.data.property_types.map((pt: string) => pt.replace('property type_', ''))
-        );
-        setDistricts(
-          districtsRes.data.districts.map((d: string) => d.replace('district_', ''))
-        );
+        const propertyTypesData = await propertyTypesRes.json();
+        const districtsData = await districtsRes.json();
+        const countiesData = await countiesRes.json();
+
+        setPropertyTypes(propertyTypesData.property_types.map((type: string) => 
+          type.replace('property type_', '')));
+        setDistricts(districtsData.districts.map((district: string) => 
+          district.replace('district_', '')));
+        setCounties(countiesData.counties.map((county: string) => 
+          county.replace('county_', '')));
       } catch (err) {
-        setError('Failed to load initial data');
-        console.error(err);
+        setError('Failed to load form options. Please try again later.');
       }
     };
 
-    fetchInitialData();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    const fetchCounties = async () => {
-      if (formData.District) {
-        try {
-          const response = await axios.get(`http://localhost:5000/api/counties?district=${formData.District}`);
-          setCounties(
-            response.data.counties
-              .filter((c: string) => c.includes(`district_${formData.District}`))
-              .map((c: string) => c.replace('district_', ''))
-          );
-        } catch (err) {
-          setError('Failed to load counties');
-          console.error(err);
-        }
-      }
-    };
-
-    fetchCounties();
-  }, [formData.District]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setPrediction(null);
     setError(null);
-    setPredictedPrice(null);
+  };
+
+  const handleSelectChange = (event: SelectChangeEvent) => {
+    const { name, value } = event.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setPrediction(null);
+    setError(null);
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
+    setPrediction(null);
+    setError(null);
+
+    const formBody = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      formBody.append(key, value);
+    });
 
     try {
-      const response = await axios.get('http://localhost:5000/predict_home_price', { 
-        params: formData 
+      const response = await fetch('http://localhost:5000/predict_home_price', {
+        method: 'POST',
+        body: formBody
       });
 
-      setPredictedPrice(response.data.estimated_price);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Prediction failed');
-      console.error(err);
+      const data: PredictionResponse = await response.json();
+
+      if (response.ok) {
+        setPrediction(data.estimated_price);
+      } else {
+        setError(data.error || 'Failed to get prediction');
+      }
+    } catch (err) {
+      setError('Failed to connect to the server. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP',
+      maximumFractionDigits: 0
+    }).format(price);
+  };
+
   return (
-    <Paper elevation={3} sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom align="center">
-        Home Price Predictor
+    <Paper elevation={3} sx={{ p: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Property Price Predictor
       </Typography>
-      
-      <form onSubmit={handleSubmit}>
-        <Grid container spacing={2}>
+      <Typography variant="body1" sx={{ mb: 4 }}>
+        Enter your property details below to get a price prediction
+      </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      {prediction !== null && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Estimated Property Price: {formatPrice(prediction)}
+        </Alert>
+      )}
+
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <Grid container spacing={3}>
           <Grid item xs={12}>
             <TextField
+              required
               fullWidth
+              name="Year"
               label="Year"
               type="number"
               value={formData.Year}
-              onChange={(e) => setFormData({
-                ...formData, 
-                Year: parseInt(e.target.value)
-              })}
-              inputProps={{ min: 2000, max: 2050 }}
+              onChange={handleInputChange}
+              inputProps={{ min: 1900, max: 2100 }}
             />
           </Grid>
 
           <Grid item xs={12}>
-            <FormControl fullWidth>
-              <InputLabel>Property Type</InputLabel>
+            <FormControl fullWidth required>
+              <InputLabel id="property-type-label">Property Type</InputLabel>
               <Select
+                labelId="property-type-label"
+                name="property_type"
                 value={formData.property_type}
                 label="Property Type"
-                onChange={(e) => setFormData({
-                  ...formData, 
-                  property_type: e.target.value as string
-                })}
+                onChange={handleSelectChange}
               >
                 {propertyTypes.map((type) => (
                   <MenuItem key={type} value={type}>
-                    {type}
+                    {type.toUpperCase()}
                   </MenuItem>
                 ))}
               </Select>
@@ -136,20 +184,18 @@ const PricePredictionForm: React.FC = () => {
           </Grid>
 
           <Grid item xs={12}>
-            <FormControl fullWidth>
-              <InputLabel>District</InputLabel>
+            <FormControl fullWidth required>
+              <InputLabel id="district-label">District</InputLabel>
               <Select
+                labelId="district-label"
+                name="District"
                 value={formData.District}
                 label="District"
-                onChange={(e) => setFormData({
-                  ...formData, 
-                  District: e.target.value as string,
-                  County: '' // Reset county when district changes
-                })}
+                onChange={handleSelectChange}
               >
                 {districts.map((district) => (
                   <MenuItem key={district} value={district}>
-                    {district}
+                    {`District_${district.toLowerCase()}`}
                   </MenuItem>
                 ))}
               </Select>
@@ -157,19 +203,18 @@ const PricePredictionForm: React.FC = () => {
           </Grid>
 
           <Grid item xs={12}>
-            <FormControl fullWidth disabled={!formData.District}>
-              <InputLabel>County</InputLabel>
+            <FormControl fullWidth required>
+              <InputLabel id="county-label">County</InputLabel>
               <Select
+                labelId="county-label"
+                name="County"
                 value={formData.County}
                 label="County"
-                onChange={(e) => setFormData({
-                  ...formData, 
-                  County: e.target.value as string
-                })}
+                onChange={handleSelectChange}
               >
                 {counties.map((county) => (
                   <MenuItem key={county} value={county}>
-                    {county}
+                    {county.charAt(0).toUpperCase() + county.slice(1)}
                   </MenuItem>
                 ))}
               </Select>
@@ -177,37 +222,23 @@ const PricePredictionForm: React.FC = () => {
           </Grid>
 
           <Grid item xs={12}>
-            <Button 
-              fullWidth 
-              variant="contained" 
-              color="primary" 
+            <Button
               type="submit"
-              disabled={!formData.District || !formData.property_type || !formData.County}
+              variant="contained"
+              fullWidth
+              size="large"
+              disabled={loading}
+              sx={{ mt: 2 }}
             >
-              Predict Price
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Get Price Prediction'
+              )}
             </Button>
           </Grid>
         </Grid>
-      </form>
-
-      {error && (
-        <Typography color="error" sx={{ mt: 2, textAlign: 'center' }}>
-          {error}
-        </Typography>
-      )}
-
-      {predictedPrice && (
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            mt: 2, 
-            textAlign: 'center', 
-            color: 'primary.main' 
-          }}
-        >
-          Estimated Price: £{predictedPrice.toLocaleString()}
-        </Typography>
-      )}
+      </Box>
     </Paper>
   );
 };
