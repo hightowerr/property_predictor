@@ -49,6 +49,14 @@ def load_saved_artifacts() -> bool:
     except Exception as e:
         print(f"Warning: Error loading XGBoost importance: {e}")
 
+    try:
+        with (artifacts_path / "xgb_model.pkl").open("rb") as f:
+            __model = pickle.load(f)
+    except FileNotFoundError:
+        print("Warning: Could not find xgb_model.pkl")
+    except Exception as e:
+        print(f"Warning: Error loading XGBoost model: {e}")
+
     return True
 
 if __name__ == "__main__":
