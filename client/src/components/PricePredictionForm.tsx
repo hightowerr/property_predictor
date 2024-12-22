@@ -12,7 +12,8 @@ import {
   MenuItem,
   SelectChangeEvent,
   Alert,
-  CircularProgress
+  CircularProgress,
+  InputAdornment
 } from '@mui/material';
 
 interface FormData {
@@ -41,6 +42,7 @@ const PricePredictionForm: React.FC = () => {
   const [prediction, setPrediction] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [districtSearch, setDistrictSearch] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,14 +57,21 @@ const PricePredictionForm: React.FC = () => {
         const districtsData = await districtsRes.json();
         const countiesData = await countiesRes.json();
 
-        setPropertyTypes(propertyTypesData.property_types.map((type: string) => 
-          type.replace('property type_', '')));
-        setDistricts(districtsData.districts.map((district: string) => 
-          district.replace('district_', '').toLowerCase()));
-        setCounties(countiesData.counties
-          .filter((county: string) => !county.startsWith('district_'))
-          .map((county: string) => county.replace('county_', '')));
+        const processedPropertyTypes = propertyTypesData.property_types.map((type: string) => 
+          type.replace('property type_', ''));
+        
+        const processedDistricts = districtsData.districts
+          .map((district: string) => district.replace('district_', ''))
+          .sort((a: string, b: string) => a.localeCompare(b));
+        
+        const processedCounties = countiesData.counties.map((county: string) => 
+          county.replace('county_', ''));
+
+        setPropertyTypes(processedPropertyTypes);
+        setDistricts(processedDistricts);
+        setCounties(processedCounties);
       } catch (err) {
+        console.error('Error fetching data:', err);
         setError('Failed to load form options. Please try again later.');
       }
     };
@@ -72,12 +81,16 @@ const PricePredictionForm: React.FC = () => {
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    setPrediction(null);
-    setError(null);
+    if (name === 'districtSearch') {
+      setDistrictSearch(value);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+      setPrediction(null);
+      setError(null);
+    }
   };
 
   const handleSelectChange = (event: SelectChangeEvent) => {
@@ -128,6 +141,10 @@ const PricePredictionForm: React.FC = () => {
       maximumFractionDigits: 0
     }).format(price);
   };
+
+  const filteredDistricts = districts.filter(district =>
+    district.toLowerCase().includes(districtSearch.toLowerCase())
+  );
 
   return (
     <Paper elevation={3} sx={{ p: 4 }}>
@@ -193,10 +210,31 @@ const PricePredictionForm: React.FC = () => {
                 value={formData.District}
                 label="District"
                 onChange={handleSelectChange}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300
+                    }
+                  }
+                }}
+
+                // startAdornment={
+                //   <InputAdornment position="start">
+                //     <TextField
+                //       size="small"
+                //       placeholder="Search districts..."
+                //       name="districtSearch"
+                //       value={districtSearch}
+                //       onChange={handleInputChange}
+                //       onClick={(e) => e.stopPropagation()}
+                //       sx={{ m: 1, width: '90%' }}
+                //     />
+                //   </InputAdornment>
+                // }
               >
-                {districts.map((district) => (
+                {filteredDistricts.map((district) => (
                   <MenuItem key={district} value={district}>
-                    {district.charAt(0).toUpperCase() + district.slice(1)}
+                    {district}
                   </MenuItem>
                 ))}
               </Select>

@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify
 import util
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route('/api/property-types', methods=['GET'])
 def get_property_types():
@@ -27,14 +29,13 @@ def get_counties():
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
-@app.route('/predict_home_price', methods=['GET', 'POST'])
+@app.route('/predict_home_price', methods=['POST'])
 def predict_home_price():
     try:
-        # Support both GET and POST requests
-        year = int(request.args.get('Year') or request.form.get('year'))
-        district = request.args.get('District') or request.form.get('district')
-        property_type = request.args.get('property_type') or request.form.get('property_type')
-        county = request.args.get('County') or request.form.get('county')
+        year = int(request.form['Year'])
+        district = request.form['District']
+        property_type = request.form['property_type']
+        county = request.form['County']
 
         response = jsonify({
             'estimated_price': util.get_estimated_price(
@@ -52,7 +53,11 @@ def predict_home_price():
     except Exception as e:
         return jsonify({'error': 'Something went wrong! ' + str(e)}), 500
 
+# Load artifacts when module is imported
+print("Loading saved artifacts...")
+if not util.load_saved_artifacts():
+    raise RuntimeError("Failed to load artifacts")
+
 if __name__ == "__main__":
     print("Starting Python Flask Server For Home Price Prediction...")
-    util.load_saved_artifacts()
-    app.run(debug=False)
+    app.run(debug=True)
