@@ -27,13 +27,14 @@ def get_counties():
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
-@app.route('/predict_home_price', methods=['POST'])
+@app.route('/predict_home_price', methods=['GET', 'POST'])
 def predict_home_price():
     try:
-        year = int(request.form['year'])
-        district = request.form['district']
-        property_type = request.form['property_type']
-        county = request.form['county']
+        # Support both GET and POST requests
+        year = int(request.args.get('Year') or request.form.get('year'))
+        district = request.args.get('District') or request.form.get('district')
+        property_type = request.args.get('property_type') or request.form.get('property_type')
+        county = request.args.get('County') or request.form.get('county')
 
         response = jsonify({
             'estimated_price': util.get_estimated_price(
