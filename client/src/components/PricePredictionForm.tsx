@@ -58,7 +58,7 @@ const PricePredictionForm: React.FC = () => {
         setPropertyTypes(propertyTypesData.property_types.map((type: string) => 
           type.replace('property type_', '')));
         setDistricts(districtsData.districts.map((district: string) => 
-          district.replace('district_', '')));
+          district.replace('district_', '').toLowerCase()));
         setCounties(countiesData.counties
           .filter((county: string) => !county.startsWith('district_'))
           .map((county: string) => county.replace('county_', '')));
