@@ -30,10 +30,11 @@ def get_counties():
 @app.route('/predict_home_price', methods=['POST'])
 def predict_home_price():
     try:
-        year = int(request.form['year'])
-        district = request.form['district']
-        property_type = request.form['property_type']
-        county = request.form['county']
+        # Support both GET and POST requests
+        year = int(request.args.get('Year') or request.form.get('year'))
+        district = request.args.get('District') or request.form.get('district')
+        property_type = request.args.get('property_type') or request.form.get('property_type')
+        county = request.args.get('County') or request.form.get('county')
 
         # Validate relationships
         mapping = util.get_district_county_mapping()
@@ -54,7 +55,12 @@ def predict_home_price():
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': 'Something went wrong! ' + str(e)}), 500
+        import traceback
+        return jsonify({
+            'error': 'Something went wrong!', 
+            'details': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
 
 if __name__ == "__main__":
     print("Starting Python Flask Server For Home Price Prediction...")
