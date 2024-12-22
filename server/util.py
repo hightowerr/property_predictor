@@ -42,16 +42,6 @@ def load_saved_artifacts() -> bool:
         return False
 
     try:
-        with (artifacts_path / "home_prices_model.pkl").open("rb") as f:
-            __model = pickle.load(f)
-    except FileNotFoundError:
-        print("Error: Could not find home_prices_model.pkl")
-        return False
-    except Exception as e:
-        print(f"Error loading model: {e}")
-        return False
-
-    try:
         with (artifacts_path / "xgb_imp.pkl").open("rb") as f:
             __xgb_imp = pickle.load(f)
     except FileNotFoundError:
