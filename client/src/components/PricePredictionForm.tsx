@@ -195,7 +195,7 @@ const PricePredictionForm: React.FC = () => {
               >
                 {districts.map((district) => (
                   <MenuItem key={district} value={district}>
-                    {`District_${district.toLowerCase()}`}
+                    {district.charAt(0).toUpperCase() + district.slice(1)}
                   </MenuItem>
                 ))}
               </Select>
