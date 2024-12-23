@@ -1,46 +1,38 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
-  mode: 'development',
   entry: './src/index.tsx',
   output: {
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'build'),
     filename: 'bundle.js',
+    publicPath: '/'
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
+    extensions: ['.ts', '.tsx', '.js', '.jsx']
   },
   module: {
     rules: [
       {
-        test: /\.tsx?$/,
+        test: /\.(ts|tsx)$/,
         use: 'ts-loader',
-        exclude: /node_modules/,
+        exclude: /node_modules/
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
-      },
-    ],
+        use: ['style-loader', 'css-loader']
+      }
+    ]
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './public/index.html',
+      template: './public/index.html'
     }),
-  ],
-  devServer: {
-    static: {
-      directory: path.join(__dirname, 'public'),
-    },
-    port: 'auto', // Changed to auto to find an available port
-    open: true,
-    hot: true,
-    proxy: [{
-      context: ['/api', '/predict_home_price'],
-      target: 'http://localhost:5000',
-      secure: false,
-      changeOrigin: true
-    }]
-  },
+    new webpack.DefinePlugin({
+      'process.env': {
+        'REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL)
+      }
+    })
+  ]
 };
