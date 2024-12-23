@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from . import util  # Using relative import
+import util  # Using local import instead of relative import
 from flask_cors import CORS
 
 app = Flask(__name__)

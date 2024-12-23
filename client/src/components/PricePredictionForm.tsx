@@ -48,9 +48,9 @@ const PricePredictionForm: React.FC = () => {
     const fetchData = async () => {
       try {
         const [propertyTypesRes, districtsRes, countiesRes] = await Promise.all([
-          fetch('http://localhost:5000/api/property-types'),
-          fetch('http://localhost:5000/api/districts'),
-          fetch('http://localhost:5000/api/counties')
+          fetch(`${process.env.REACT_APP_API_URL}/api/property-types`),
+          fetch(`${process.env.REACT_APP_API_URL}/api/districts`),
+          fetch(`${process.env.REACT_APP_API_URL}/api/counties`)
         ]);
 
         const propertyTypesData = await propertyTypesRes.json();
@@ -115,7 +115,7 @@ const PricePredictionForm: React.FC = () => {
     });
 
     try {
-      const response = await fetch('http://localhost:5000/predict_home_price', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/predict_home_price`, {
         method: 'POST',
         body: formBody
       });
